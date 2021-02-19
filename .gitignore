@@ -5,8 +5,10 @@
 !.gitignore
 !getImage.py
 !detect.py
-!LICENSE
 !result.png
 !README.md
-!out/*
-!templates/*
+!LICENSE
+!/out/
+!/out/*
+!/templates/
+!/templates/*
