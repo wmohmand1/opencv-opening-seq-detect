@@ -1,0 +1,12 @@
+# ignore everything
+*
+
+# keep
+!.gitignore
+!getImage.py
+!detect.py
+!LICENSE
+!result.png
+!README.md
+!out/*
+!templates/*
