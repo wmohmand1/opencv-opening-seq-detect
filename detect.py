@@ -3,22 +3,60 @@ import os
 import sys
 import numpy as np
 from matplotlib import pyplot as plt
+import logging
+import threading
+import time
+
+
+start = []
+end = []
 
 def detect(video, template_start, template_end, method=cv.TM_CCOEFF_NORMED, sample_rate=4, threshold=0.9):
     # initialize
-    start = []
-    end = []
-    count = 0
+    global start
+    global end
+    threads_list = list()
+    
+
+    firstT = threading.Thread(target=threadDetect, args=(0, 1000, template_start, template_end, method, threshold))
+    secondT = threading.Thread(target=threadDetect, args=(1000, 2000, template_start, template_end, method, threshold))
+    thirdT = threading.Thread(target=threadDetect, args=(2000, 3000, template_start, template_end, method, threshold))
+    fourthT = threading.Thread(target=threadDetect, args=(3000, 4000, template_start, template_end, method, threshold))
+    fifthT = threading.Thread(target=threadDetect, args=(4000, 4320, template_start, template_end, method, threshold))
+
+    firstT.start()
+    secondT.start()
+    thirdT.start()
+    fourthT.start()
+    fifthT.start()
+
+    threads_list.append(firstT)
+    threads_list.append(secondT)
+    threads_list.append(thirdT)
+    threads_list.append(fourthT)
+    threads_list.append(fifthT)
+
+    for t in threads_list:
+        t.join()
+    
+    print('Selecting best match...')
+    start = [ x for x in start if x[1] == max(np.transpose(start)[1])]
+    end = [ x for x in end if x[1] == max(np.transpose(end)[1])]
+
+    return start, end
+
+def threadDetect (count, endCount, template_start, template_end, method, threshold):
     # start reading the video
-    vidcap = cv.VideoCapture(video)
     print('Detection started. This could take a while.')
+    vidcap = cv.VideoCapture(video)
     while vidcap.isOpened():
+        vidcap.set(cv.CAP_PROP_POS_FRAMES,count)
         success, img = vidcap.read()
-        if count> 4320: # only checking the first 3min of the video
+        if count> endCount: # only checking the first 3min of the video
             break
         if count%200==0 and count!=0:
             print(f'{count} frames checked.')
-        if count%sample_rate == 0:
+        if count%1 == 0:
             if success:
                 # replace with normalized image buffer
                 cv.imwrite(os.path.join('out', '%d.png') % count, img)
@@ -43,12 +81,10 @@ def detect(video, template_start, template_end, method=cv.TM_CCOEFF_NORMED, samp
                 break
         else:
             count += 1
+
     cv.destroyAllWindows()
     vidcap.release()
-    print('Selecting best match...')
-    start = [ x for x in start if x[1] == max(np.transpose(start)[1])]
-    end = [ x for x in end if x[1] == max(np.transpose(end)[1])]
-    return start, end
+
 
 def result_gen(detect_start, detect_end, start_img, end_img):
     print('Creating report...')
@@ -86,11 +122,11 @@ def result_gen(detect_start, detect_end, start_img, end_img):
 if len(sys.argv) !=4:
     print("\r\nInvalid or missing params. Please format your command as the following: \r\npython detect.py <video_path> <start_image> <end_image>\r\n e.g. python3 detect.py 'friends_s1e2.avi' 'templates/start.png' 'templates/end.png'\r\n")
 else:
-    script, video, start, end = sys.argv
-    print(f"\r\n---\r\nvideo input is: {video}\r\nstart image selected: {start}\r\nend image selected: {end}\r\n---\r\n")
+    script, video, startTemplate, endTemplate = sys.argv
+    print(f"\r\n---\r\nvideo input is: {video}\r\nstart image selected: {startTemplate}\r\nend image selected: {endTemplate}\r\n---\r\n")
 
-    start_img = cv.imread(str(start), 0)
-    end_img = cv.imread(str(end), 0)
+    start_img = cv.imread(str(startTemplate), 0)
+    end_img = cv.imread(str(endTemplate), 0)
 
     detect_start, detect_end = detect(str(video), start_img, end_img)
     result_gen(detect_start, detect_end, start_img, end_img)
